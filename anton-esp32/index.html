@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Anton’s Mindstorms의 LMS-ESP32, PUPRemote, PyHuskyLens, BluePad32, UartRemote, SerialTalk을 SPIKE Prime 관점에서 정리한 한국어 기술 가이드" />
+  <meta property="og:title" content="SPIKE Prime × ESP32 | Anton’s Mindstorms 기술 가이드" />
+  <meta property="og:description" content="LEGO SPIKE Prime을 ESP32, HuskyLens, 게임패드, I2C/UART 센서로 확장하는 방법" />
+  <meta property="og:type" content="website" />
+  <title>SPIKE Prime × ESP32 | Anton’s Mindstorms 기술 가이드</title>
+  <style>
+    :root{
+      --bg:#07111f;--panel:#0c1828;--panel2:#101f32;--line:#20344c;
+      --text:#edf5ff;--muted:#9fb2c8;--cyan:#52d6ff;--green:#57e389;
+      --yellow:#ffd166;--orange:#ff9f68;--red:#ff6b7a;--blue:#74a7ff;
+      --code:#050b13;--max:1180px;--shadow:0 18px 60px rgba(0,0,0,.28);
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{margin:0;background:linear-gradient(180deg,#07111f 0%,#081522 45%,#07111f 100%);color:var(--text);font-family:Inter,Pretendard,"Noto Sans KR",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.7}
+    a{color:inherit} .wrap{width:min(var(--max),calc(100% - 36px));margin:auto}
+    header{position:sticky;top:0;z-index:30;background:rgba(7,17,31,.88);backdrop-filter:blur(18px);border-bottom:1px solid rgba(159,178,200,.15)}
+    .nav{height:68px;display:flex;align-items:center;gap:20px}.brand{font-weight:900;text-decoration:none;letter-spacing:-.03em;margin-right:auto}.brand b{color:var(--cyan)}
+    .nav a.link{font-size:14px;color:var(--muted);text-decoration:none}.nav a.link:hover{color:#fff}
+    .hero{padding:92px 0 64px;overflow:hidden}.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:46px;align-items:center}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(82,214,255,.3);background:rgba(82,214,255,.08);color:#bfefff;padding:7px 12px;border-radius:999px;font-size:13px;font-weight:800}
+    h1{font-size:clamp(42px,6vw,76px);line-height:1.05;letter-spacing:-.055em;margin:20px 0 22px} h1 em{font-style:normal;color:var(--cyan)}
+    .lead{font-size:clamp(17px,2vw,21px);color:#c5d3e3;max-width:760px}
+    .hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}.btn{display:inline-flex;align-items:center;justify-content:center;padding:13px 18px;border-radius:12px;text-decoration:none;font-weight:800;border:1px solid var(--line)}
+    .btn.primary{background:var(--cyan);color:#041019;border-color:transparent}.btn.ghost{background:#0e1b2c;color:#dbe9f7}
+    .hero-card{position:relative;background:linear-gradient(145deg,#0d1d31,#0a1626);border:1px solid #1d3550;border-radius:26px;padding:26px;box-shadow:var(--shadow)}
+    .hero-card:before{content:"";position:absolute;inset:-80px auto auto -70px;width:220px;height:220px;background:rgba(82,214,255,.12);filter:blur(50px);border-radius:50%}
+    .mini-title{font-weight:900;margin-bottom:18px}.stack{display:grid;gap:11px}.node{padding:13px 14px;border-radius:12px;border:1px solid #29415e;background:#0c1929;display:flex;justify-content:space-between;align-items:center;font-weight:700}.node small{color:var(--muted);font-weight:600}
+    .arrow{text-align:center;color:var(--cyan);font-weight:900}
+    section{padding:72px 0}.section-head{max-width:780px;margin-bottom:34px}.kicker{color:var(--cyan);font-size:13px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}
+    h2{font-size:clamp(30px,4.3vw,50px);line-height:1.16;letter-spacing:-.04em;margin:8px 0 14px} h3{letter-spacing:-.025em}
+    .section-head p,.muted{color:var(--muted)}
+    .grid{display:grid;gap:18px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+    .card{background:linear-gradient(180deg,var(--panel),#0a1524);border:1px solid var(--line);border-radius:18px;padding:23px;box-shadow:0 10px 34px rgba(0,0,0,.14)}
+    .card h3{margin:8px 0 8px}.card p{margin:0;color:#b6c5d6}.num{font-size:12px;font-weight:900;color:var(--cyan);letter-spacing:.08em}
+    .accent{border-color:rgba(82,214,255,.42);background:linear-gradient(180deg,rgba(82,214,255,.08),#0a1524)}
+    .note{border-left:4px solid var(--yellow);background:rgba(255,209,102,.07);padding:16px 18px;border-radius:0 12px 12px 0;color:#e8dfc4}
+    .architecture{display:grid;grid-template-columns:1fr 78px 1fr 78px 1fr;align-items:center;gap:10px;margin:30px 0}
+    .arch-box{min-height:170px;border:1px solid #29415e;border-radius:20px;background:#0c192a;padding:22px}.arch-box strong{display:block;font-size:20px;margin-bottom:8px}.arch-box p{margin:0;color:var(--muted);font-size:14px}
+    .arch-arrow{text-align:center;font-size:28px;color:var(--cyan)}
+    .label{display:inline-block;padding:4px 8px;border-radius:7px;background:#14283e;color:#a9c7e7;font-size:12px;font-weight:800;margin:3px 4px 3px 0}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px}table{border-collapse:collapse;width:100%;min-width:760px;background:#0a1625}th,td{padding:14px 16px;text-align:left;border-bottom:1px solid #1b3048;vertical-align:top}th{background:#10233a;color:#e8f4ff;font-size:13px}td{color:#b9c9da;font-size:14px}tr:last-child td{border-bottom:0}
+    code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}.codebox{position:relative;background:var(--code);border:1px solid #1e334b;border-radius:14px;overflow:hidden;margin:16px 0}.code-title{padding:9px 14px;border-bottom:1px solid #1e334b;color:#8eacc9;font-size:12px;font-weight:800}.codebox pre{margin:0;padding:18px;overflow:auto;color:#dcecff;font-size:13px;line-height:1.65}
+    .copy{position:absolute;right:10px;top:8px;background:#15283b;border:1px solid #2a4159;color:#d7e7f6;border-radius:8px;padding:6px 9px;font-size:11px;cursor:pointer}
+    .steps{counter-reset:step;display:grid;gap:13px}.step{counter-increment:step;background:#0b1828;border:1px solid var(--line);border-radius:16px;padding:20px 20px 20px 62px;position:relative}.step:before{content:counter(step);position:absolute;left:18px;top:18px;width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:var(--cyan);color:#05121d;font-weight:900}.step strong{display:block;margin-bottom:5px}.step p{margin:0;color:var(--muted)}
+    .compare td:first-child{color:#fff;font-weight:800}.good{color:var(--green);font-weight:800}.warn{color:var(--yellow);font-weight:800}.bad{color:var(--red);font-weight:800}
+    .wiring{display:grid;grid-template-columns:1fr 1fr;gap:18px}.pinmap{font-family:monospace;background:#07101c;border:1px solid var(--line);padding:20px;border-radius:16px;white-space:pre;overflow:auto;color:#dcecff}
+    .roadmap{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.road{padding:18px;border-radius:16px;background:#0c1929;border:1px solid var(--line)}.road b{display:block;color:var(--cyan);font-size:12px;margin-bottom:8px}.road strong{display:block;margin-bottom:7px}.road p{font-size:13px;color:var(--muted);margin:0}
+    .source-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.source{display:block;text-decoration:none;border:1px solid var(--line);background:#0b1726;border-radius:14px;padding:16px}.source:hover{border-color:var(--cyan)}.source strong{display:block;margin-bottom:4px}.source span{color:var(--muted);font-size:13px;word-break:break-all}
+    footer{padding:44px 0 70px;color:#7990a8;font-size:13px;border-top:1px solid rgba(159,178,200,.12)}
+    @media(max-width:900px){.hero-grid,.g3,.g4,.wiring,.source-list{grid-template-columns:1fr}.g2{grid-template-columns:1fr}.architecture{grid-template-columns:1fr}.arch-arrow{transform:rotate(90deg)}.roadmap{grid-template-columns:1fr 1fr}.nav a.link{display:none}.hero{padding-top:68px}}
+    @media(max-width:560px){.wrap{width:min(100% - 24px,var(--max))}.roadmap{grid-template-columns:1fr}.hero-actions{display:grid}.btn{width:100%}section{padding:56px 0}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top">SPIKE × <b>ESP32</b></a>
+    <a class="link" href="#architecture">구조</a>
+    <a class="link" href="#pupremote">PUPRemote</a>
+    <a class="link" href="#huskylens">HuskyLens</a>
+    <a class="link" href="#io">확장 I/O</a>
+    <a class="link" href="#sources">출처</a>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="pill">Anton’s Mindstorms 기술 문서 기반 · 2026-09-21 검토</span>
+      <h1>LEGO SPIKE Prime의 한계를<br><em>ESP32로 확장한다.</em></h1>
+      <p class="lead">LMS-ESP32, PUPRemote, PyHuskyLens, BluePad32, UartRemote, SerialTalk을 하나의 관점으로 연결해 이해하는 한국어 실전 가이드입니다. 핵심은 ESP32를 별도 로봇 두뇌로 쓰는 것이 아니라, SPIKE와 외부 전자장치 사이의 <strong>확장 I/O·통신·전처리 계층</strong>으로 쓰는 것입니다.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#start">바로 시작하기</a>
+        <a class="btn ghost" href="https://docs.antonsmindstorms.com/" target="_blank" rel="noreferrer">Anton 문서 열기 ↗</a>
+      </div>
+    </div>
+    <aside class="hero-card">
+      <div class="mini-title">가장 중요한 데이터 흐름</div>
+      <div class="stack">
+        <div class="node"><span>HuskyLens / 센서 / Gamepad</span><small>인식·입력</small></div>
+        <div class="arrow">↓ I2C · UART · BLE · GPIO</div>
+        <div class="node"><span>LMS-ESP32</span><small>전처리·브리지</small></div>
+        <div class="arrow">↓ LPF2 / PUPRemote</div>
+        <div class="node"><span>SPIKE Prime + Pybricks</span><small>판단·모터제어</small></div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Executive summary</span>
+      <h2>ESP32를 붙이면 무엇이 달라지는가?</h2>
+      <p>SPIKE Prime은 LEGO 생태계 안에서는 매우 편리하지만 일반 전자부품의 GPIO, I2C, UART, BLE 장치를 자유롭게 연결하기 어렵습니다. LMS-ESP32가 이 경계를 연결합니다.</p>
+    </div>
+    <div class="grid g4">
+      <article class="card accent"><span class="num">01</span><h3>센서 확장</h3><p>HuskyLens, 라인센서, 음성인식 센서 등 일반 I2C/UART 센서를 SPIKE 프로젝트에 포함할 수 있습니다.</p></article>
+      <article class="card"><span class="num">02</span><h3>출력 확장</h3><p>서보, NeoPixel 등 LEGO 포트 밖의 액추에이터와 LED를 ESP32에서 제어할 수 있습니다.</p></article>
+      <article class="card"><span class="num">03</span><h3>무선 입력</h3><p>BluePad32/BT 계열을 이용해 PS4·Switch 계열 게임패드나 모바일 RC 입력을 연결할 수 있습니다.</p></article>
+      <article class="card"><span class="num">04</span><h3>역할 분리</h3><p>AI·통신·센서 전처리는 ESP32, 주행 판단과 LEGO 모터 제어는 SPIKE가 맡는 분산 구조가 가능합니다.</p></article>
+    </div>
+  </div>
+</section>
+
+<section id="architecture">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Architecture</span>
+      <h2>Anton 방식의 핵심 아키텍처</h2>
+      <p>PUPRemote는 ESP32 같은 MicroPython 보드가 LEGO Powered Up 센서처럼 보이도록 LPF2를 에뮬레이션하고, 상위 계층에서는 RPC 스타일의 명령 호출을 제공합니다.</p>
+    </div>
+    <div class="architecture">
+      <div class="arch-box"><strong>① 외부 장치</strong><p>HuskyLens · I2C 센서 · UART 센서 · Servo · NeoPixel · Bluetooth Gamepad</p><div><span class="label">I2C</span><span class="label">UART</span><span class="label">GPIO</span><span class="label">BLE</span></div></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box"><strong>② LMS-ESP32</strong><p>MicroPython 실행, 센서 데이터 읽기, AI 결과 전처리, 외부 출력 제어, LEGO 포트 브리지 역할</p><div><span class="label">pupremote</span><span class="label">uartremote</span><span class="label">pyhuskylens</span></div></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box"><strong>③ SPIKE Prime</strong><p>Pybricks/SPIKE 프로그램에서 외부 데이터를 받아 주행 판단, 모터 제어, 로봇 상태 관리</p><div><span class="label">LPF2</span><span class="label">PUPDevice</span><span class="label">Pybricks</span></div></div>
+    </div>
+    <div class="note"><strong>중요:</strong> LMS-ESP32와 PUPRemote는 LEGO 공식 제품/라이브러리가 아니라 Anton’s Mindstorms 프로젝트 생태계입니다. SPIKE 펌웨어와 Pybricks 버전에 따라 호환 조건이 달라질 수 있으므로 수업용 장비는 버전을 고정해 관리하는 편이 안전합니다.</div>
+  </div>
+</section>
+
+<section id="firmware">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Firmware</span>
+      <h2>LMS-ESP32 펌웨어 선택</h2>
+      <p>Anton의 웹 플래셔에서 목적별 펌웨어를 직접 설치할 수 있습니다. 현재 프로젝트 페이지에서 일반 LMS 프로젝트용으로 MicroPython 1.25.0이 advised 상태로 제공됩니다.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>플랫폼</th><th>버전</th><th>포함 라이브러리</th><th>상태</th><th>추천 용도</th></tr></thead>
+        <tbody>
+          <tr><td>MicroPython</td><td>1.25.0</td><td>LVGL 9.3, UartRemote, PUPRemote</td><td><span class="good">advised</span></td><td>SPIKE + LMS-ESP32 일반 프로젝트</td></tr>
+          <tr><td>MicroPython</td><td>1.27</td><td>LVGL 9.3, LMS libraries</td><td><span class="warn">beta</span></td><td>최신 기능 테스트</td></tr>
+          <tr><td>MicroPython</td><td>1.24.1</td><td>UartRemote, PUPRemote</td><td>legacy</td><td>기존 프로젝트 유지</td></tr>
+          <tr><td>MicroPython</td><td>1.19.1</td><td>LVGL 8.3, ulab, UartRemote, PUPRemote</td><td>legacy</td><td>LMS-ESP32 v1 / I2S 마이크 기반 구형 예제</td></tr>
+          <tr><td>BluePad</td><td>UartRemote</td><td>BluePad32, UartRemote</td><td><span class="good">advised</span></td><td>EV3/Inventor 및 UART 기반 허브</td></tr>
+          <tr><td>BluePad</td><td>LPF2</td><td>BluePad32, LPF2 bridge</td><td><span class="good">advised</span></td><td>SPIKE 3 / Pybricks + 게임패드</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="pupremote">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Core technology</span>
+      <h2>PUPRemote: ESP32를 LEGO 센서처럼 보이게</h2>
+      <p>가장 중요한 라이브러리입니다. ESP32 측의 <code>PUPRemoteSensor</code>와 허브 측의 <code>PUPRemoteHub</code>가 대응하며, 채널 또는 명령을 정의한 뒤 값을 읽거나 호출합니다.</p>
+    </div>
+    <div class="grid g2">
+      <article class="card"><h3>저수준: LPF2 에뮬레이션</h3><p>ESP32가 LEGO Powered Up 장치 프로토콜을 흉내 냅니다. SPIKE 허브의 포트에서 외부 MCU를 '센서'처럼 다룰 수 있게 하는 기반 계층입니다.</p></article>
+      <article class="card"><h3>상위: RPC 스타일 호출</h3><p>명령 이름과 struct 포맷을 정의하고, SPIKE에서 <code>call()</code>을 사용해 ESP32 함수를 호출하는 식으로 빠르게 프로토타입을 만들 수 있습니다.</p></article>
+    </div>
+
+    <div class="codebox">
+      <div class="code-title">LMS-ESP32 · main.py — 최소 PUPRemote 예제</div><button class="copy">복사</button>
+      <pre><code>from pupremote import PUPRemoteSensor, SPIKE_ULTRASONIC
+
+value = 0
+
+def num(*argv):
+    global value
+    value += 1
+    return 2 * value, -3 * value, 4 * value
+
+p = PUPRemoteSensor(
+    sensor_id=SPIKE_ULTRASONIC,
+    power=True,
+    max_packet_size=16
+)
+
+p.add_command(
+    "num",
+    from_hub_fmt="3b",
+    to_hub_fmt="3b"
+)
+
+while True:
+    p.process()</code></pre>
+    </div>
+
+    <div class="codebox">
+      <div class="code-title">SPIKE Prime · Pybricks — ESP32 명령 호출</div><button class="copy">복사</button>
+      <pre><code>from pybricks.parameters import Port
+from pupremote_hub import PUPRemoteHub
+
+p = PUPRemoteHub(Port.A, max_packet_size=16)
+
+p.add_command(
+    "num",
+    from_hub_fmt="3b",
+    to_hub_fmt="3b"
+)
+
+result = p.call("num", 1, 2, -45)
+print(result)</code></pre>
+    </div>
+
+    <div class="note"><strong>Pybricks 패킷 주의:</strong> Anton의 PUPRemote 문서는 Pybricks에서 32-byte 패킷 관련 제약이 있을 수 있어 <code>max_packet_size=16</code> 사용을 권장하는 호환성 메모를 제공합니다.</div>
+  </div>
+</section>
+
+<section id="start">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Getting started</span>
+      <h2>실습 시작 순서</h2>
+      <p>처음부터 HuskyLens까지 한 번에 연결하기보다 통신 계층을 단계별로 확인하면 디버깅이 쉬워집니다.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><strong>1. LMS-ESP32 펌웨어 설치</strong><p>Anton firmware installer에서 프로젝트에 맞는 펌웨어를 플래시합니다. 일반 학습용 시작점은 MicroPython 1.25.0입니다.</p></div>
+      <div class="step"><strong>2. ViperIDE 또는 MicroPython IDE에서 ESP32 확인</strong><p>REPL 접속과 간단한 print가 정상인지 확인하고, 필요한 라이브러리가 펌웨어에 포함되어 있는지 확인합니다.</p></div>
+      <div class="step"><strong>3. PUPRemote 더미 데이터 통신</strong><p>외부 센서를 연결하지 않고 숫자/문자열을 ESP32 ↔ SPIKE로 먼저 주고받습니다.</p></div>
+      <div class="step"><strong>4. 실제 I2C/UART 센서 연결</strong><p>HuskyLens나 라인센서를 ESP32에 연결한 뒤 ESP32 단독으로 데이터가 읽히는지 먼저 확인합니다.</p></div>
+      <div class="step"><strong>5. 센서 결과를 PUPRemote 채널로 전달</strong><p>원본 데이터를 전부 보내기보다 로봇이 필요한 값만 줄여 전달합니다. 예: x 오차, ID, 감지 여부.</p></div>
+      <div class="step"><strong>6. SPIKE는 제어에 집중</strong><p>전달받은 특징값으로 PID, 상태기계, 모터 명령, 미션 로직을 수행합니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="huskylens">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">AI vision</span>
+      <h2>ESP32 + HuskyLens + SPIKE Prime</h2>
+      <p>Anton의 PyHuskyLens는 HuskyLens V1/V2와 I2C 또는 UART로 통신하는 Python 라이브러리입니다. ESP32가 비전 결과를 읽고 필요한 값만 PUPRemote로 SPIKE에 전달하는 구성이 특히 실용적입니다.</p>
+    </div>
+
+    <div class="wiring">
+      <div class="card">
+        <h3>추천 데이터 파이프라인</h3>
+        <p class="muted">영상 자체를 SPIKE로 보내지 않습니다. HuskyLens에서 추론된 구조화 결과를 ESP32가 읽어 필요한 특징만 압축해서 보냅니다.</p>
+        <div class="pinmap">HuskyLens
+   │  AI inference
+   ▼
+LMS-ESP32
+   │  x_head, x_tail, ID, seen...
+   ▼
+PUPRemote / LPF2
+   │
+   ▼
+SPIKE Prime
+   │  steering / state machine
+   ▼
+LEGO Motors</div>
+      </div>
+      <div class="card">
+        <h3>Anton 예제의 I2C 설정</h3>
+        <p class="muted">현재 PUPRemote의 HuskyLens + Pybricks 예제는 ESP32 측에서 SoftI2C를 사용해 SCL=GPIO20, SDA=GPIO19로 설정합니다. 보드 버전/배선에 따라 핀은 달라질 수 있습니다.</p>
+        <div class="pinmap">ESP32 example
+SCL = GPIO 20
+SDA = GPIO 19
+
+HuskyLens 설정
+Protocol Type = I2C</div>
+      </div>
+    </div>
+
+    <div class="codebox">
+      <div class="code-title">LMS-ESP32 — HuskyLens 라인 추적 결과를 SPIKE로 전달</div><button class="copy">복사</button>
+      <pre><code>from machine import Pin, SoftI2C
+from pupremote import PUPRemoteSensor
+from pyhuskylens import HuskyLens, ALGORITHM_LINE_TRACKING
+import time
+
+# SPIKE와 연결
+pr = PUPRemoteSensor(power=True)
+pr.add_channel("line", "hhb")
+pr.process()
+
+# HuskyLens 부팅 대기
+time.sleep(4)
+
+# Anton의 현재 예제 핀
+i2c = SoftI2C(
+    scl=Pin(20),
+    sda=Pin(19)
+)
+
+huskylens = HuskyLens(i2c)
+
+print("HuskyLens connected:", huskylens.knock())
+
+huskylens.set_alg(ALGORITHM_LINE_TRACKING)
+huskylens.show_text("Hello LMS-ESP32 !")
+
+while True:
+    lines = huskylens.get_arrows()
+
+    if lines:
+        x_head = lines[0].x_head - 160
+        x_tail = lines[0].x_tail - 160
+        line_seen = 1
+    else:
+        x_head = 0
+        x_tail = 0
+        line_seen = 0
+
+    pr.update_channel(
+        "line",
+        x_head,
+        x_tail,
+        line_seen
+    )
+    pr.process()</code></pre>
+    </div>
+
+    <div class="grid g3">
+      <article class="card"><h3>라인 추적</h3><p><code>x_head</code>와 <code>x_tail</code>을 화면 중심 기준 오차로 바꿔 조향값을 계산할 수 있습니다.</p></article>
+      <article class="card"><h3>객체/얼굴 추적</h3><p>블록의 x, y, width, height, ID를 이용해 팬/틸트 또는 로봇 방향을 결정할 수 있습니다.</p></article>
+      <article class="card"><h3>V2 고급 결과</h3><p>PyHuskyLens 저장소는 V2의 얼굴 랜드마크, 21-point 손 키포인트, 17-point 포즈 지원을 설명합니다.</p></article>
+    </div>
+  </div>
+</section>
+
+<section id="io">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Expansion</span>
+      <h2>게임패드·라인센서·음성센서까지</h2>
+      <p>ESP32를 중간 계층으로 두면 LEGO 포트만으로는 연결하기 어려운 입력과 출력 장치를 하나의 로봇 시스템으로 묶을 수 있습니다.</p>
+    </div>
+
+    <div class="grid g3">
+      <article class="card">
+        <h3>BluePad32 / Gamepad</h3>
+        <p>BluePad32 LPF2 펌웨어는 Bluetooth 게임패드 입력을 LEGO 허브로 전달하고, LMS-ESP32에 연결한 NeoPixel과 Servo도 제어할 수 있도록 설계되어 있습니다.</p>
+        <div><span class="label">PS4</span><span class="label">Switch 계열</span><span class="label">Servo</span><span class="label">NeoPixel</span></div>
+      </article>
+      <article class="card">
+        <h3>LMS Line Sensor</h3>
+        <p>최신 LMS-ESP32 펌웨어에는 라인센서 드라이버가 포함되어 있으며 I2C에서 <code>position()</code>과 <code>derivative()</code> 값을 사용할 수 있습니다.</p>
+        <div><span class="label">I2C</span><span class="label">calibration</span><span class="label">position</span></div>
+      </article>
+      <article class="card">
+        <h3>SEN0539 음성인식</h3>
+        <p>mpy_robot_tools의 SEN0539 모듈은 I2C 기반 음성인식 센서를 지원합니다. Anton 문서는 Inventor Hub에서 직접 쓸 수 없어 LMS-ESP32 또는 OpenMV를 사용하라고 설명합니다.</p>
+        <div><span class="label">Voice</span><span class="label">I2C</span><span class="label">Command ID</span></div>
+      </article>
+    </div>
+
+    <div class="codebox">
+      <div class="code-title">LMS Line Sensor — MicroPython I2C 기본 예</div><button class="copy">복사</button>
+      <pre><code>from time import sleep
+from line_sensor import LineSensorI2C
+
+sensor = LineSensorI2C(
+    scl_pin=4,
+    sda_pin=5,
+    device_addr=51
+)
+
+sensor.ir_power(True)
+sensor.load_calibration()
+sensor.mode_calibrated()
+
+while True:
+    print(
+        sensor.position(),
+        sensor.derivative()
+    )
+    sleep(0.02)</code></pre>
+    </div>
+  </div>
+</section>
+
+<section id="serial">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Communication</span>
+      <h2>PUPRemote · UartRemote · SerialTalk 차이</h2>
+      <p>세 라이브러리는 겹치는 부분이 있지만 목적이 다릅니다. SPIKE의 Powered Up 포트에 '센서처럼' 붙이고 싶다면 PUPRemote가 가장 직접적입니다.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="compare">
+        <thead><tr><th>기술</th><th>핵심 목적</th><th>주 통신</th><th>SPIKE 사용 관점</th><th>추천 상황</th></tr></thead>
+        <tbody>
+          <tr><td>PUPRemote</td><td>Powered Up 센서 에뮬레이션 + RPC</td><td>LPF2/PUP</td><td><span class="good">가장 자연스러움</span></td><td>ESP32를 SPIKE 포트 확장장치처럼 사용</td></tr>
+          <tr><td>UartRemote</td><td>두 UART 장치 사이의 근실시간 RPC</td><td>UART</td><td>별도 UART 경로 필요</td><td>ESP32/STM32/OpenMV 등 MCU 간 범용 통신</td></tr>
+          <tr><td>SerialTalk</td><td>UartRemote 프로토콜의 범용화</td><td>UART · Socket · BT RFCOMM 등</td><td>네트워크/무선 확장 가능</td><td>통신 채널을 UART에 한정하지 않는 분산 시스템</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">Anton 문서는 UartRemote/SerialTalk을 센서 데이터 약 30–50 Hz 수준으로 읽을 수 있을 만큼 빠른 통신으로 설명합니다. Arduino/C++ 구현은 MicroPython 구현보다 훨씬 빠르지만 배포 난이도는 높아집니다.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Design patterns</span>
+      <h2>자율주행·AI 로봇 수업에 적용하는 방법</h2>
+      <p>ESP32를 붙이는 것보다 중요한 것은 어떤 데이터를 어느 프로세서에서 처리할지 역할을 나누는 것입니다.</p>
+    </div>
+    <div class="grid g2">
+      <article class="card accent">
+        <h3>A. 센서 전처리형</h3>
+        <p><strong>ESP32:</strong> 센서 원시값 수집 → 필터링 → 특징값 계산<br><strong>SPIKE:</strong> 특징값 기반 상태판단 → 모터 제어</p>
+        <p class="muted">예: 8채널 라인센서 → 선 위치/미분값만 SPIKE로 전달</p>
+      </article>
+      <article class="card accent">
+        <h3>B. AI 인식형</h3>
+        <p><strong>HuskyLens:</strong> AI 추론<br><strong>ESP32:</strong> 결과 파싱/축약<br><strong>SPIKE:</strong> 행동 정책 수행</p>
+        <p class="muted">예: 얼굴 x좌표와 ID만 전달 → 사람 추적 로봇</p>
+      </article>
+      <article class="card">
+        <h3>C. 원격조종형</h3>
+        <p><strong>Gamepad/BLE:</strong> 조이스틱 입력<br><strong>ESP32:</strong> BLE 처리<br><strong>SPIKE:</strong> 조향·구동 모터 명령</p>
+      </article>
+      <article class="card">
+        <h3>D. 하이브리드 상태기계</h3>
+        <p><strong>ESP32:</strong> 복합 센서 이벤트 생성<br><strong>SPIKE:</strong> SEARCH → TRACK → AVOID → STOP 같은 상태 전환</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Troubleshooting</span>
+      <h2>수업에서 자주 막힐 지점</h2>
+    </div>
+    <div class="grid g2">
+      <article class="card"><h3>1. 펌웨어와 예제 버전 불일치</h3><p>오래된 블로그 예제의 핀/라이브러리 버전을 그대로 복사하지 말고 현재 firmware installer와 GitHub 예제를 먼저 확인합니다.</p></article>
+      <article class="card"><h3>2. 통신부터 분리 테스트</h3><p>센서 + ESP32 + SPIKE를 한 번에 디버깅하지 않습니다. ESP32 단독 센서 테스트 → PUPRemote 더미 통신 → 통합 순서가 좋습니다.</p></article>
+      <article class="card"><h3>3. 너무 많은 데이터를 보내기</h3><p>이미지/긴 배열 대신 제어에 필요한 특징값만 보냅니다. 패킷 크기와 루프 주기에 여유가 생깁니다.</p></article>
+      <article class="card"><h3>4. 블로킹 루프</h3><p>ESP32 측에서 센서 읽기나 계산이 너무 오래 걸리면 <code>p.process()</code> 호출 주기가 느려져 허브 통신이 불안정해질 수 있습니다.</p></article>
+      <article class="card"><h3>5. 전원·레벨 확인</h3><p>외부 센서/서보 전류가 커지면 전원 문제가 통신 오류처럼 보일 수 있습니다. 센서 전압과 GND 공통 여부를 확인합니다.</p></article>
+      <article class="card"><h3>6. 핀맵 고정 관리</h3><p>LMS-ESP32 버전과 예제에 따라 GPIO 배치가 달라질 수 있습니다. 수업용 장비는 보드 버전·핀맵·펌웨어를 세트로 문서화하세요.</p></article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Learning roadmap</span>
+      <h2>5단계 학습 로드맵</h2>
+    </div>
+    <div class="roadmap">
+      <div class="road"><b>LEVEL 1</b><strong>MicroPython</strong><p>GPIO, I2C, UART 기본</p></div>
+      <div class="road"><b>LEVEL 2</b><strong>PUPRemote</strong><p>SPIKE ↔ ESP32 숫자/채널 통신</p></div>
+      <div class="road"><b>LEVEL 3</b><strong>Sensor Bridge</strong><p>라인/거리/음성 등 외부 센서 연결</p></div>
+      <div class="road"><b>LEVEL 4</b><strong>HuskyLens AI</strong><p>비전 결과를 특징값으로 전달</p></div>
+      <div class="road"><b>LEVEL 5</b><strong>AI Mobility</strong><p>상태기계·PID·미션 로직 통합</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="sources">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Primary sources</span>
+      <h2>확인한 주요 원문</h2>
+      <p>이 페이지는 Anton’s Mindstorms 문서와 Anton/프로젝트 GitHub 저장소를 중심으로 정리했습니다. 코드 적용 전에는 아래 최신 원문을 다시 확인하는 것을 권장합니다.</p>
+    </div>
+    <div class="source-list">
+      <a class="source" href="https://docs.antonsmindstorms.com/en/latest/Software/PUPRemote/docs/" target="_blank" rel="noreferrer"><strong>PUPRemote Documentation</strong><span>docs.antonsmindstorms.com/.../PUPRemote/docs/</span></a>
+      <a class="source" href="https://github.com/AntonsMindstorms/PUPRemote" target="_blank" rel="noreferrer"><strong>PUPRemote GitHub</strong><span>github.com/AntonsMindstorms/PUPRemote</span></a>
+      <a class="source" href="https://firmware.antonsmindstorms.com/" target="_blank" rel="noreferrer"><strong>LMS-ESP32 Firmware Installer</strong><span>firmware.antonsmindstorms.com</span></a>
+      <a class="source" href="https://docs.antonsmindstorms.com/en/latest/Software/PyHuskyLens/docs/index.html" target="_blank" rel="noreferrer"><strong>PyHuskyLens Documentation</strong><span>docs.antonsmindstorms.com/.../PyHuskyLens/</span></a>
+      <a class="source" href="https://github.com/AntonsMindstorms/pyhuskylens" target="_blank" rel="noreferrer"><strong>PyHuskyLens GitHub</strong><span>github.com/AntonsMindstorms/pyhuskylens</span></a>
+      <a class="source" href="https://docs.antonsmindstorms.com/en/latest/Software/UartRemote/" target="_blank" rel="noreferrer"><strong>UartRemote Documentation</strong><span>docs.antonsmindstorms.com/.../UartRemote/</span></a>
+      <a class="source" href="https://docs.antonsmindstorms.com/en/latest/Software/SerialTalk/docs/index.html" target="_blank" rel="noreferrer"><strong>SerialTalk Documentation</strong><span>docs.antonsmindstorms.com/.../SerialTalk/</span></a>
+      <a class="source" href="https://docs.antonsmindstorms.com/en/latest/Software/lms-line-sensor/docs/index.html" target="_blank" rel="noreferrer"><strong>LMS Line Sensor</strong><span>docs.antonsmindstorms.com/.../lms-line-sensor/</span></a>
+      <a class="source" href="https://docs.antonsmindstorms.com/en/latest/Software/mpy-robot-tools/Docs/index.html" target="_blank" rel="noreferrer"><strong>mpy_robot_tools</strong><span>SEN0539 Voice Recognition 포함</span></a>
+      <a class="source" href="https://www.antonsmindstorms.com/" target="_blank" rel="noreferrer"><strong>Anton’s Mindstorms</strong><span>www.antonsmindstorms.com</span></a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <strong>SPIKE Prime × ESP32 Technical Guide</strong><br>
+    Anton’s Mindstorms 자료를 학습 목적으로 재구성한 비공식 한국어 가이드 · LEGO®는 LEGO Group의 상표입니다.
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll(".copy").forEach(function(btn){
+    btn.addEventListener("click", async function(){
+      var code = btn.parentElement.querySelector("code").innerText;
+      try{
+        await navigator.clipboard.writeText(code);
+        var old = btn.textContent;
+        btn.textContent = "복사됨";
+        setTimeout(function(){btn.textContent=old},1200);
+      }catch(e){
+        btn.textContent = "선택 후 복사";
+      }
+    });
+  });
+</script>
+</body>
+</html>
